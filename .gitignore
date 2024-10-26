@@ -1,1 +1,3 @@
 venv/
+database/.env
+__pycache__
