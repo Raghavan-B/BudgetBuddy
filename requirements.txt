@@ -1,2 +1,6 @@
 mysql-connector-python
 python-dotenv
+bcrypt
+scipy
+pulp
+streamlit
