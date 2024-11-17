@@ -2,3 +2,5 @@ venv/
 database/.env
 __pycache__
 .streamlit
+.env
+references

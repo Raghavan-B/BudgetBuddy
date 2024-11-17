@@ -4,7 +4,7 @@ import pandas as pd
 from database.db_config import get_connection 
 import datetime
 import plotly.express as px
-
+from utils.rag_utils import prompt_template_dash,get_gemini_response
 
 if "logged_in" in st.session_state and st.session_state.logged_in: 
     if 'optimal_budget' and 'tracked_expenses' in st.session_state:   
@@ -14,7 +14,7 @@ if "logged_in" in st.session_state and st.session_state.logged_in:
         year = datetime.datetime.now().year
         month = datetime.datetime.now().month
 
-        st.title(f"Monthly Budget Dashboard - {month}/{year}")
+        st.header(f"Monthly Budget Dashboard - {month}/{year}")
 
         def calculate_cumsum():
             query = f'''select sum(rent),sum(groceries),sum(shopping),sum(daily_spending),sum(loan),sum(bills),sum(other_expenses),year(tracked_date),month(tracked_date) from tracker 
@@ -26,15 +26,12 @@ if "logged_in" in st.session_state and st.session_state.logged_in:
             data = cursor.fetchall()
             return data
         data = calculate_cumsum()[0]
-        expense_cols = columns = [ "Rent", "Groceries", "Shopping", "Daily_spending","Loan", "Bills", "Others",'Year','Month']
+        expense_cols = columns = [ "Rent", "Groceries", "Shopping", "Daily_spending","Loan", "Bills", "Others"]
         cumulative_expenses = {}
         for expense in range(len(expense_cols)):
             cumulative_expenses[expense_cols[expense]] = data[expense]
 
-
-        # st.write('Cumulative sum of expenses: ')
-        # st.json(expense_cum_dict)
-        # Calculations
+        st.session_state.cumulative_expenses = cumulative_expenses
 
         # Calculations
         categories = [cat for cat in optimal_budget.keys() if cat != "Savings"]
@@ -45,9 +42,15 @@ if "logged_in" in st.session_state and st.session_state.logged_in:
         # Dashboard Layout
 
         # Summary Metrics
-        st.metric("Total Optimal Budget (Excluding Savings)", f"₹{total_optimal_budget}")
-        st.metric("Cumulative Expense to Date", f"₹{total_cumulative_expense}")
-        st.metric("Remaining Budget (Excluding Savings)", f"₹{remaining_budget}")
+        col1,col2 =  st.columns(2)
+        with col1:
+            st.metric("Total Optimal Budget (Excluding Savings)", f"₹{total_optimal_budget}")
+            st.metric("Cumulative Expense to Date", f"₹{total_cumulative_expense}")
+        with col2:
+            # Additional Savings Display
+            # st.write("### Savings Goal")
+            st.metric("Optimal Savings for the Month", f"₹{optimal_budget['Savings']}")
+            st.metric("Remaining Budget (Excluding Savings)", f"₹{remaining_budget}")
 
         # Budget vs Actuals Breakdown Table
         data = {
@@ -93,9 +96,23 @@ if "logged_in" in st.session_state and st.session_state.logged_in:
             if cumulative_expenses.get(cat, 0) > 0.8 * optimal_budget[cat]:
                 st.warning(f"⚠️ High spending alert for {cat}: {cumulative_expenses[cat]} / {optimal_budget[cat]} (80% or more of budget)")
 
-        # Additional Savings Display
-        st.write("### Savings Goal")
-        st.metric("Optimal Savings for the Month", f"₹{optimal_budget['Savings']}")
+        # st.bar_chart(data = cumulative_expenses,x_label="Expense Category",y_label="Amout spend")
+        fig = px.bar(x = cumulative_expenses.keys(),y=cumulative_expenses.values(),title="Cumulative Expense in each category")
+        st.plotly_chart(fig)
+
+        if st.button("Get AI Report"):
+            user_persona = user_data = f"""Username {st.session_state.username} 
+            User's todays Spendings {st.session_state.tracked_expenses} 
+            User's budget for this month {st.session_state.optimal_budget.items()}
+            User's Cumulative expenses: {st.session_state.cumulative_expenses}
+            """
+            prompt = prompt_template_dash()+user_persona
+            response = get_gemini_response(prompt)
+            # st.session_state.tracker_res = response
+            st.markdown(response)
+
+
+
     else:
         st.warning('Please go to optimal budget page and track your expenses for the day and visit this dashboard')
         st.stop()

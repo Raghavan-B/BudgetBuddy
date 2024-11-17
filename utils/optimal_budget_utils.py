@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 import pandas as pd
 from database.db_config import get_connection
 import datetime
+import random
 
 date = datetime.date.today()
 month = datetime.datetime.now().month
@@ -93,7 +94,7 @@ class BudgetOptimizer:
                 min_amount = expense_dict[category] * 1 # 30% of maximum for essential
                 prob += spending_vars[category] >= min_amount
             else:
-                min_amount = expense_dict[category] * 0.5  # 10% of maximum for non-essential
+                min_amount = expense_dict[category] *random.uniform(0.7,0.85)   # 10% of maximum for non-essential
                 prob += spending_vars[category] >= min_amount
         
         # Solve the problem
