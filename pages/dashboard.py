@@ -5,6 +5,7 @@ from database.db_config import get_connection
 import datetime
 import plotly.express as px
 from utils.rag_utils import prompt_template_dash,get_gemini_response
+from utils.dashboard_utils import get_cu_expense_perday
 
 if "logged_in" in st.session_state and st.session_state.logged_in: 
     if 'optimal_budget' and 'tracked_expenses' in st.session_state:   
@@ -77,14 +78,15 @@ if "logged_in" in st.session_state and st.session_state.logged_in:
                 spent_percentage = 0
             st.progress(spent_percentage, text=f"{cat} ({spent_percentage * 100:.1f}%)")
 
-        # Expense Tracking Over Time (Sample Data)
-        # Assuming we have a time series up to today's date
-        time_data = pd.DataFrame({
-            "Date": pd.date_range(start=f"{year}-{month:02d}-01", end=f"{year}-{month:02d}-04"),
-            "Cumulative Expense": [3000, 7200, 9800, total_cumulative_expense]
-        })
-        fig_time_series = px.line(time_data, x="Date", y="Cumulative Expense", title="Expense Tracking Over Time")
-        st.plotly_chart(fig_time_series)
+        date_list,cu_expenses = get_cu_expense_perday(st.session_state.email)
+        fig_line_plot = px.line(x = date_list,y = cu_expenses)
+        fig_line_plot.update_layout(
+            xaxis_title='Date',
+            yaxis_title='Expenses (In INR)',
+            title = 'Expense tracking over time'
+        )
+
+        st.plotly_chart(fig_line_plot)
 
         # Pie Chart of Budget Allocation (Excluding Savings)
         fig_pie = px.pie(names=categories, values=[optimal_budget[cat] for cat in categories], title="Budget Allocation by Category")
